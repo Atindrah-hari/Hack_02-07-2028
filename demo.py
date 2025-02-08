@@ -157,8 +157,8 @@ while running:
             # Check for Fly
             if (right_hand.thumb.x < left_hand.thumb.x and right_hand.index.x < left_hand.index.x and
                 right_hand.middle.x < left_hand.middle.x and right_hand.ring.x< left_hand.ring.x and 
-                right_hand.pinky.x< left_hand.pinky.x):
-                current_gesture = "Fly"
+                right_hand.pinky.x < left_hand.pinky.x):
+                print("FLY")
 
             # Check for Peace Sign (index and middle fingers raised, others down)
             elif (index_tip.y < thumb_tip.y and middle_tip.y < thumb_tip.y and
