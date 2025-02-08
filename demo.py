@@ -2,86 +2,76 @@ import cv2
 import pygame
 import numpy as np
 import mediapipe as mp
-
-# Initialize MediaPipe Hands
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-mp_drawing = mp.solutions.drawing_utils
+from cvzone.HandTrackingModule import HandDetector
 
 # Initialize Pygame
 pygame.init()
 
-
-
-
-
-
 # Set up display
 screen_width, screen_height = 800, 600
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Test poses for pokemon")
-
-
-#creating hand class to have Left hand object and right hand object 
-class Hand :
-    def __init__(self,label):
-        self.label = label
-        self.thumb = None
-        self.index= None
-        self.middle = None
-        self.ring = None
-        self.pinky = None
-        self.wrist = None
-    def update_position(self,landmarks):
-        self.thumb = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
-        self.index = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-        self.middle = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
-        self.ring = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
-        self.pinky = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
-        self.wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
-
-
-
+pygame.display.set_caption("Test Poses for Pokémon")
 
 # Initialize OpenCV camera
-cap = cv2.VideoCapture(0)  # Use 0 for the default webcam
+cap = cv2.VideoCapture(0)  # Use 0 for default webcam
 
-# Get the original dimensions of the camera feed
+# Get original camera feed dimensions
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-aspect_ratio = frame_width / frame_height  # Calculate aspect ratio
+aspect_ratio = frame_width / frame_height
 
-# Define the target size for the camera feed in Pygame
-target_height = screen_height // 4  # Set target height to 1/4 of the screen height
-target_width = int(target_height * aspect_ratio)  # Calculate target width to maintain aspect ratio
+# Define target size for camera feed in Pygame
+target_height = screen_height // 4  # 1/4 of screen height
+target_width = int(target_height * aspect_ratio)  # Maintain aspect ratio
+
+# Initialize Hand Detector
+detector = HandDetector(detectionCon=0.8, maxHands=2)
+
+# Initialize MediaPipe Hands
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
 
 # Define the target sequence of gestures
 TARGET_SEQUENCE = ["Fly", "Peace Sign", "Fist"]
 
 # Initialize variables for sequence recognition
-sequence_buffer = []  # Stores the detected gestures
-sequence_index = 0    # Tracks progress in the target sequence
-buffer_size = 30      # Increased buffer size
+sequence_buffer = []  # Stores detected gestures
+sequence_index = 0    # Tracks progress in target sequence
+buffer_size = 30      # Buffer size
 
+# Function to detect gestures based on hand landmarks
+def detect_gesture(hand):
+    """Detects predefined gestures based on hand landmark positions."""
+    lmList = hand["lmList"]
+    
+    if not lmList:
+        return "None"
 
+    # Example: Detecting a "Fist" (all fingers curled)
+    finger_tips = [8, 12, 16, 20]  # Index, Middle, Ring, Pinky tips
+    is_fist = all(lmList[tip][1] > lmList[0][1] for tip in finger_tips)  # Tips below wrist
 
+    # Example: Detecting a "Peace Sign" (Index & Middle extended)
+    is_peace = (
+        lmList[8][1] < lmList[6][1] and  # Index extended
+        lmList[12][1] < lmList[10][1] and  # Middle extended
+        lmList[16][1] > lmList[14][1] and  # Ring curled
+        lmList[20][1] > lmList[18][1]  # Pinky curled
+    )
 
-# prompts user to raise left hand
+    # Example: Detecting "Fly" (both hands open wide)
+    is_fly = hand["type"] == "Left"  # Example condition, modify as needed
 
+    if is_fist:
+        return "Fist"
+    elif is_peace:
+        return "Peace Sign"
+    elif is_fly:
+        return "Fly"
+    
+    return "None"
 
-
-
-
-
-screen.fill((0, 0, 0))  # Fill with black
-right_hand_raised = False # initial check
-left_hand_raised = False # initial check
-
-
-# prompting user to raise left hand 
-font = pygame.font.Font(None, 36)
-text = font.render("Raise YOUR LEFT HAND", True, (255, 255, 255))
-screen.blit(text,(screen_width // 2 - 50 , screen_height - 20))
+# Main Loop
 running = True
 while running:
     # Handle Pygame events
@@ -95,129 +85,71 @@ while running:
         print("Failed to capture frame.")
         break
 
-    # Flip the frame horizontally to mirror the camera feed
-    frame = cv2.flip(frame, 1)  # 1 means horizontal flip
+    # Flip frame horizontally for mirror effect
+    frame = cv2.flip(frame, 1)
 
-    # Convert the frame from BGR (OpenCV) to RGB (MediaPipe)
+    # Convert frame from BGR (OpenCV) to RGB (MediaPipe)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Process the frame with MediaPipe Hands
-    results = hands.process(rgb_frame)
+    # Detect hands using cvzone
+    hands_detected, img = detector.findHands(frame, draw=True)
 
-    # Initialize a variable to store the current gesture
+    # Initialize detected gesture
     current_gesture = "None"
 
-    
+    if hands_detected:
+        for hand in hands_detected:
+            hand_type = hand["type"]  # "Left" or "Right"
+            current_gesture = detect_gesture(hand)
 
-    # If hands are detected
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-
-            # Draw hand landmarks and connections
-            mp_drawing.draw_landmarks(
-                frame,  # Draw on the original frame
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS,
-                mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),  # Landmark color
-                mp_drawing.DrawingSpec(color=(0, 0, 255), thickness=2, circle_radius=2)   # Connection color
-            )
-
-            # Get landmark coordinates for gesture recognition
-            thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
-            index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
-            middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
-            ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
-            pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
-
-
-            
-            # detects left hand
-            if not left_hand_raised:
-                left_hand = Hand("left_hand")
-                left_hand.update_position(hand_landmarks)
-                left_hand_raised = True
-
-            #detect right hand
-            if not right_hand_raised:
-                screen.fill((0, 0, 0))   # Fill with black
-                font = pygame.font.Font(None, 36)
-                text = font.render("Raise YOUR RIGHT HAND", True, (255, 255, 255))
-                screen.blit(text,(screen_width // 2 - 50 , screen_height - 20))
-                right_hand = Hand("right_hand")
-                right_hand.update_position(hand_landmarks)
-                right_hand_raised = True
-
-
-
-            if left_hand_raised and right_hand_raised:
-                left_hand.update_position(hand_landmarks)
-                right_hand.update_position(hand_landmarks)
-    
-
-            # Check for Fly
-            if (right_hand.thumb.x < left_hand.thumb.x and right_hand.index.x < left_hand.index.x and
-                right_hand.middle.x < left_hand.middle.x and right_hand.ring.x< left_hand.ring.x and 
-                right_hand.pinky.x < left_hand.pinky.x):
-                print("FLY")
-
-            # Check for Peace Sign (index and middle fingers raised, others down)
-            elif (index_tip.y < thumb_tip.y and middle_tip.y < thumb_tip.y and
-                  ring_tip.y > middle_tip.y and pinky_tip.y > middle_tip.y):
-                current_gesture = "Peace Sign"
-
-            # Check for Fist (all fingertips below MCP joints)
-            elif (thumb_tip.y > hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP].y and
-                  index_tip.y > hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP].y and
-                  middle_tip.y > hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_MCP].y and
-                  ring_tip.y > hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_MCP].y and
-                  pinky_tip.y > hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP].y):
-                current_gesture = "Fist"
+            # Display hand type on screen
+            bbox = hand["bbox"]
+            cv2.putText(frame, f"{hand_type} Hand", (bbox[0], bbox[1] - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     # Update the sequence buffer
     if current_gesture != "None":
         sequence_buffer.append(current_gesture)
 
-        # Keep the buffer size manageable (e.g., last 30 gestures)
+        # Keep buffer size manageable
         if len(sequence_buffer) > buffer_size:
             sequence_buffer.pop(0)
 
-    # Check if the sequence matches the target sequence
+    # Check if detected sequence matches the target sequence
     if sequence_index < len(TARGET_SEQUENCE):
         target_gesture = TARGET_SEQUENCE[sequence_index]
 
-        # Search for the target gesture in the buffer
+        # Look for target gesture in buffer
         if target_gesture in sequence_buffer:
-            sequence_index += 1  # Move to the next gesture in the sequence
-            sequence_buffer = []  # Clear the buffer after a match
+            sequence_index += 1  # Move to next gesture
+            sequence_buffer.clear()  # Reset buffer
     else:
-        sequence_index = 0  # Reset the sequence progress
+        sequence_index = 0  # Reset sequence if completed
 
-    # Convert the frame from BGR (OpenCV) to RGB (Pygame)
+    # Convert frame from BGR (OpenCV) to RGB (Pygame)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Resize the frame while preserving the aspect ratio
+    # Resize frame to fit Pygame screen
     frame = cv2.resize(frame, (target_width, target_height))
 
-    # Convert the frame to a Pygame surface
-    frame = np.rot90(frame)  # Rotate the frame to match Pygame's coordinate system
+    # Convert frame to Pygame surface
+    frame = np.rot90(frame)
     frame = pygame.surfarray.make_surface(frame)
 
+    # Display camera feed on Pygame screen
+    screen.blit(frame, (0, 0))
 
-    # Blit the camera feed onto the Pygame screen
-    screen.blit(frame, (0, 0))  # Position the camera feed at the top-left corner
-
-    # Add other Pygame elements (e.g., text, shapes, etc.)
-    
+    # Display sequence progress
     font = pygame.font.Font(None, 36)
     text = font.render(f"Sequence Progress: {sequence_index}/{len(TARGET_SEQUENCE)}", True, (255, 255, 255))
     screen.blit(text, (screen_width // 2 - 150, screen_height - 50))
 
-    # Update the display
+    # Update Pygame display
     pygame.display.flip()
 
-    # Cap the frame rate
+    # Cap frame rate
     pygame.time.Clock().tick(30)
 
-# Release the camera and quit Pygame
+# Release resources and quit Pygame
 cap.release()
 pygame.quit()
