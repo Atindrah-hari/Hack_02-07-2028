@@ -34,7 +34,7 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
 
 # Define the target sequence of gestures
-TARGET_SEQUENCE = ["Fly", "Peace Sign", "Fist"]
+TARGET_SEQUENCE = ["Fly", "Throw", "Fist"]
 
 # Initialize variables for sequence recognition
 sequence_buffer = []  # Stores detected gestures
@@ -45,8 +45,13 @@ buffer_size = 30      # Buffer size
 
 # Main Loop
 running = True
+zL = [] # for throw calc
+zR = []
+left_is_throwing = False
+right_is_throwing = False
+# delay  = - 1
 while running:
-    # Handle Pygame events
+    # Handle Pygame event
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -70,6 +75,8 @@ while running:
 
     left_hand = None
     right_hand = None
+    # if (delay>=0):
+    #     delay -=1
 
 
     if hands_detected:
@@ -87,10 +94,31 @@ while running:
             bbox = hand["bbox"]
             cv2.putText(frame, f"{hand_type} Hand", (bbox[0], bbox[1] - 20),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    
 
+    
+    if (right_hand):
+        # print('RIGHT',right_hand != {})
+        # print('ZR>>>>>>',zR == [])
+        # if (delay<=-1):
+        right_is_throwing = detect_throw(right_hand,zR)
+    # else:
+    #     zR = []
+    if(left_hand):
+        # print('Left',left_hand != {})
+        # if (delay<=-1):
+        left_is_throwing = detect_throw(left_hand,zL)
+    # else:
+    #     zL = []
+    is_throwing = left_is_throwing or right_is_throwing
+    if is_throwing:
+        # print(is_throwing)
+        # delay = 50
+        current_gesture = "Throw"
     if left_hand and right_hand:
         if (detect_fly(left_hand,right_hand)):
             current_gesture = "Fly"
+    
 
     # Update the sequence buffer
     if current_gesture != "None":
@@ -136,7 +164,7 @@ while running:
     pygame.display.flip()
 
     # Cap frame rate
-    pygame.time.Clock().tick(30)
+    pygame.time.Clock().tick(60)
 
 # Release resources and quit Pygame
 cap.release()
