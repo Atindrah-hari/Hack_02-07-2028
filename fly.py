@@ -2,6 +2,7 @@ import cv2
 import pygame
 import numpy as np
 import mediapipe as mp
+import HandTrackingModule as htm
 from cvzone.HandTrackingModule import HandDetector
 
 
@@ -52,10 +53,6 @@ def fist_palm_tip_help(left_list,right_list):
     ring_dif = abs(left_list[16][1]-right_list[16][1])
     pinky_dif = abs(left_list[20][1]-right_list[20][1])
 
-    print("index_k_df",index_dif)
-    print("middle_k_df",middle_dif)
-    print("ring_k_df",index_dif)
-    print("pinky_k_df",index_dif)
 
 
     return index_dif>=200 and middle_dif>=200 and ring_dif>=200 and pinky_dif>=200
@@ -122,10 +119,76 @@ def detect_triangle(left_hand,right_hand):
     thumb_avg_x =  (left_hand_list[4][1] + right_hand_list[4][1])//2
 
 
-    print("index_avg_x",index_avg_x)
-    print("index_avg_y",index_avg_y)
-    print("thumb_avg_x",thumb_avg_x)
-    print("thumb_avg_y",index_avg_y)
+
 
 
     return thumb_distance<150 and index_distance<150 and abs(index_avg_y -thumb_avg_y) > 350 and abs(index_avg_x -thumb_avg_x)<500
+
+
+
+
+def detect_catch(hand,rev_t_list):
+    hand_list = hand["lmList"]
+    base_i_x=hand_list[5][0]
+    base_i_y=hand_list[5][1]
+    base_p_x=hand_list[17][0]
+    base_p_y=hand_list[17][1]
+    distance = ((base_i_x - base_p_x)**2 + (base_i_y - base_p_y) ** 2)**0.5
+    rev_t_list.append(distance)
+
+    delta_distance_rev = (rev_t_list[-1] - rev_t_list[0]) // len(rev_t_list)
+
+
+    if (len(rev_t_list)>=5):
+        rev_t_list.pop(0)
+
+
+    if delta_distance_rev <=-25:
+        return True
+    return False
+
+
+
+def detect_swipe(hand,handX):
+    hand_list = hand["lmList"]
+    middle_x = hand_list[12][0]
+
+    handX.append(middle_x)
+
+    delta_middle_x = (handX[-1] - handX[0]) // len(handX)
+
+
+    if(len(handX)>=10): 
+        handX.pop(0)
+
+    if(abs(delta_middle_x)>=75):
+        return True 
+    return False
+
+
+# def detect
+
+
+
+
+
+def detect_mouse(hand,list_of_fingers,wCam,hCam,wScr,hScr):
+    hand_List = hand["lmList"]
+    index_tip_x = hand_List[8][0]
+    index_tip_y = hand_List[8][1]
+    middle_tip_x = hand_List[12][0]
+    middle_tip_x_y = hand_List[12][1]
+
+    index_tip_mirrored_x= wScr - index_tip_x
+
+    # list_of_fingers = HandDetector.fingersUp(hand)
+    
+    # print('wcam', wCam)
+    # print("wScr",wScr)
+    if(list_of_fingers[1] ==1 and list_of_fingers[2] == 0):
+        
+        return False,((index_tip_mirrored_x,index_tip_y))
+    elif(list_of_fingers[1] ==1 and list_of_fingers[2] == 1 and list_of_fingers[3] == 0):
+        return True, ((index_tip_mirrored_x,index_tip_y))
+    
+    return False , (0,0)
