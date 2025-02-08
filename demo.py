@@ -3,6 +3,7 @@ import pygame
 import numpy as np
 import mediapipe as mp
 from cvzone.HandTrackingModule import HandDetector
+from fly import *
 
 # Initialize Pygame
 pygame.init()
@@ -18,10 +19,11 @@ cap = cv2.VideoCapture(0)  # Use 0 for default webcam
 # Get original camera feed dimensions
 frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+frame = cv2.flip(cap.read()[1], 1)  # Read and flip in one line
 aspect_ratio = frame_width / frame_height
 
 # Define target size for camera feed in Pygame
-target_height = screen_height // 4  # 1/4 of screen height
+target_height = screen_height   # 1/4 of screen height
 target_width = int(target_height * aspect_ratio)  # Maintain aspect ratio
 
 # Initialize Hand Detector
@@ -40,36 +42,6 @@ sequence_index = 0    # Tracks progress in target sequence
 buffer_size = 30      # Buffer size
 
 # Function to detect gestures based on hand landmarks
-def detect_gesture(hand):
-    """Detects predefined gestures based on hand landmark positions."""
-    lmList = hand["lmList"]
-    
-    if not lmList:
-        return "None"
-
-    # Example: Detecting a "Fist" (all fingers curled)
-    finger_tips = [8, 12, 16, 20]  # Index, Middle, Ring, Pinky tips
-    is_fist = all(lmList[tip][1] > lmList[0][1] for tip in finger_tips)  # Tips below wrist
-
-    # Example: Detecting a "Peace Sign" (Index & Middle extended)
-    is_peace = (
-        lmList[8][1] < lmList[6][1] and  # Index extended
-        lmList[12][1] < lmList[10][1] and  # Middle extended
-        lmList[16][1] > lmList[14][1] and  # Ring curled
-        lmList[20][1] > lmList[18][1]  # Pinky curled
-    )
-
-    # Example: Detecting "Fly" (both hands open wide)
-    is_fly = hand["type"] == "Left"  # Example condition, modify as needed
-
-    if is_fist:
-        return "Fist"
-    elif is_peace:
-        return "Peace Sign"
-    elif is_fly:
-        return "Fly"
-    
-    return "None"
 
 # Main Loop
 running = True
@@ -86,8 +58,7 @@ while running:
         break
 
     # Flip frame horizontally for mirror effect
-    frame = cv2.flip(frame, 1)
-
+ 
     # Convert frame from BGR (OpenCV) to RGB (MediaPipe)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -97,15 +68,29 @@ while running:
     # Initialize detected gesture
     current_gesture = "None"
 
+    left_hand = None
+    right_hand = None
+
+
     if hands_detected:
         for hand in hands_detected:
-            hand_type = hand["type"]  # "Left" or "Right"
-            current_gesture = detect_gesture(hand)
+            if hand["type"] == "Left":
+                left_hand = hand
+
+                
+            else:
+                right_hand = hand
+        
+            hand_type = hand["type"]
 
             # Display hand type on screen
             bbox = hand["bbox"]
             cv2.putText(frame, f"{hand_type} Hand", (bbox[0], bbox[1] - 20),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    if left_hand and right_hand:
+        if (detect_fly(left_hand,right_hand)):
+            current_gesture = "Fly"
 
     # Update the sequence buffer
     if current_gesture != "None":
@@ -114,6 +99,9 @@ while running:
         # Keep buffer size manageable
         if len(sequence_buffer) > buffer_size:
             sequence_buffer.pop(0)
+
+        
+
 
     # Check if detected sequence matches the target sequence
     if sequence_index < len(TARGET_SEQUENCE):
