@@ -11,10 +11,37 @@ mp_drawing = mp.solutions.drawing_utils
 # Initialize Pygame
 pygame.init()
 
+
+
+
+
+
 # Set up display
 screen_width, screen_height = 800, 600
 screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Pygame with Hand and Sequence Recognition")
+pygame.display.set_caption("Test poses for pokemon")
+
+
+#creating hand class to have Left hand object and right hand object 
+class Hand :
+    def __init__(self,label):
+        self.label = label
+        self.thumb = None
+        self.index= None
+        self.middle = None
+        self.ring = None
+        self.pinky = None
+        self.wrist = None
+    def update_position(self,landmarks):
+        self.thumb = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
+        self.index = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+        self.middle = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
+        self.ring = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
+        self.pinky = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
+        self.wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
+
+
+
 
 # Initialize OpenCV camera
 cap = cv2.VideoCapture(0)  # Use 0 for the default webcam
@@ -29,14 +56,32 @@ target_height = screen_height // 4  # Set target height to 1/4 of the screen hei
 target_width = int(target_height * aspect_ratio)  # Calculate target width to maintain aspect ratio
 
 # Define the target sequence of gestures
-TARGET_SEQUENCE = ["Thumbs Up", "Peace Sign", "Fist"]
+TARGET_SEQUENCE = ["Fly", "Peace Sign", "Fist"]
 
 # Initialize variables for sequence recognition
 sequence_buffer = []  # Stores the detected gestures
 sequence_index = 0    # Tracks progress in the target sequence
 buffer_size = 30      # Increased buffer size
 
-# Main loop
+
+
+
+# prompts user to raise left hand
+
+
+
+
+
+
+screen.fill((0, 0, 0))  # Fill with black
+right_hand_raised = False # initial check
+left_hand_raised = False # initial check
+
+
+# prompting user to raise left hand 
+font = pygame.font.Font(None, 36)
+text = font.render("Raise YOUR LEFT HAND", True, (255, 255, 255))
+screen.blit(text,(screen_width // 2 - 50 , screen_height - 20))
 running = True
 while running:
     # Handle Pygame events
@@ -62,9 +107,12 @@ while running:
     # Initialize a variable to store the current gesture
     current_gesture = "None"
 
+    
+
     # If hands are detected
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
+
             # Draw hand landmarks and connections
             mp_drawing.draw_landmarks(
                 frame,  # Draw on the original frame
@@ -81,10 +129,36 @@ while running:
             ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
             pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
-            # Check for Thumbs Up
-            if (thumb_tip.y < index_tip.y and thumb_tip.y < middle_tip.y and
-                thumb_tip.y < ring_tip.y and thumb_tip.y < pinky_tip.y):
-                current_gesture = "Thumbs Up"
+
+            
+            # detects left hand
+            if not left_hand_raised:
+                left_hand = Hand("left_hand")
+                left_hand.update_position(hand_landmarks)
+                left_hand_raised = True
+
+            #detect right hand
+            if not right_hand_raised:
+                screen.fill((0, 0, 0))   # Fill with black
+                font = pygame.font.Font(None, 36)
+                text = font.render("Raise YOUR RIGHT HAND", True, (255, 255, 255))
+                screen.blit(text,(screen_width // 2 - 50 , screen_height - 20))
+                right_hand = Hand("right_hand")
+                right_hand.update_position(hand_landmarks)
+                right_hand_raised = True
+
+
+
+            if left_hand_raised and right_hand_raised:
+                left_hand.update_position(hand_landmarks)
+                right_hand.update_position(hand_landmarks)
+    
+
+            # Check for Fly
+            if (right_hand.thumb.x < left_hand.thumb.x and right_hand.index.x < left_hand.index.x and
+                right_hand.middle.x < left_hand.middle.x and right_hand.ring.x< left_hand.ring.x and 
+                right_hand.pinky.x< left_hand.pinky.x):
+                current_gesture = "Fly"
 
             # Check for Peace Sign (index and middle fingers raised, others down)
             elif (index_tip.y < thumb_tip.y and middle_tip.y < thumb_tip.y and
@@ -128,13 +202,12 @@ while running:
     frame = np.rot90(frame)  # Rotate the frame to match Pygame's coordinate system
     frame = pygame.surfarray.make_surface(frame)
 
-    # Clear the screen
-    screen.fill((0, 0, 0))  # Fill with black
 
     # Blit the camera feed onto the Pygame screen
     screen.blit(frame, (0, 0))  # Position the camera feed at the top-left corner
 
     # Add other Pygame elements (e.g., text, shapes, etc.)
+    
     font = pygame.font.Font(None, 36)
     text = font.render(f"Sequence Progress: {sequence_index}/{len(TARGET_SEQUENCE)}", True, (255, 255, 255))
     screen.blit(text, (screen_width // 2 - 150, screen_height - 50))
