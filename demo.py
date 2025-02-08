@@ -34,7 +34,7 @@ mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
 
 # Define the target sequence of gestures
-TARGET_SEQUENCE = ["Fly", "Throw", "Fist"]
+TARGET_SEQUENCE = ["Fly", "Throw", "fist_palm","dragonBall","Triangle"]
 
 # Initialize variables for sequence recognition
 sequence_buffer = []  # Stores detected gestures
@@ -118,6 +118,12 @@ while running:
     if left_hand and right_hand:
         if (detect_fly(left_hand,right_hand)):
             current_gesture = "Fly"
+        elif (detect_fist_palm(left_hand,right_hand)):
+            current_gesture = "fist_palm"
+        elif (detect_dragonBall(left_hand,right_hand)):
+            current_gesture = "dragonBall"
+        elif (detect_triangle(left_hand,right_hand)):
+            current_gesture = "Triangle"
     
 
     # Update the sequence buffer

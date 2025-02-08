@@ -35,7 +35,6 @@ def detect_throw(hand,zList):
     zList.append(distance)
 
     delta_distance = (zList[-1] - zList[0]) // len(zList)
-    print(delta_distance)
 
 
 
@@ -45,3 +44,88 @@ def detect_throw(hand,zList):
         return True
     return False
   
+
+
+def fist_palm_tip_help(left_list,right_list):
+    index_dif = abs(left_list[8][1]-right_list[8][1])
+    middle_dif = abs(left_list[12][1]-right_list[12][1])
+    ring_dif = abs(left_list[16][1]-right_list[16][1])
+    pinky_dif = abs(left_list[20][1]-right_list[20][1])
+
+    print("index_k_df",index_dif)
+    print("middle_k_df",middle_dif)
+    print("ring_k_df",index_dif)
+    print("pinky_k_df",index_dif)
+
+
+    return index_dif>=200 and middle_dif>=200 and ring_dif>=200 and pinky_dif>=200
+
+
+def detect_fist_palm(left_hand,right_hand):
+    left_hand_list = left_hand["lmList"]
+    right_hand_list = right_hand["lmList"]
+
+
+    index_knuckle_dif = ((left_hand_list[5][0]- right_hand_list[5][0])**2 + (left_hand_list[5][1]- right_hand_list[5][1])**2) ** 0.5 
+    middle_knuckle_dif = ((left_hand_list[9][0]- right_hand_list[9][0])**2 + (left_hand_list[9][1]- right_hand_list[9][1])**2) ** 0.5 
+    ring_knuckle_dif = ((left_hand_list[13][0]- right_hand_list[13][0])**2 + (left_hand_list[13][1]- right_hand_list[13][1])**2) ** 0.5 
+    pinky_knuckle_dif = ((left_hand_list[17][0]- right_hand_list[17][0])**2 + (left_hand_list[17][1]- right_hand_list[17][1])**2) ** 0.5 
+
+
+    
+
+
+
+
+    if(index_knuckle_dif<200 and middle_knuckle_dif<200 and ring_knuckle_dif<200 and pinky_knuckle_dif<200):
+        if(fist_palm_tip_help(left_hand_list,right_hand_list)):
+            return True
+        return False
+    return False
+
+
+def detect_dragonBall(left_hand, right_hand):
+    left_hand_list = left_hand["lmList"]
+    right_hand_list = right_hand["lmList"]
+    
+    dyIndex = abs(left_hand_list[8][1] - right_hand_list[8][1])
+    dxIndex = abs(left_hand_list[8][0]- right_hand_list[8][0])
+    
+    dyMid = abs(left_hand_list[12][1] - right_hand_list[12][1])
+    dxMid = abs(left_hand_list[12][0] - right_hand_list[12][0])
+    
+    dyRing = abs(left_hand_list[16][1] - right_hand_list[16][1])
+    dxRing = abs(left_hand_list[16][0] - right_hand_list[16][0])
+
+    dyPinky = abs(left_hand_list[20][1] - right_hand_list[20][1])
+    dxPinky = abs(left_hand_list[20][0] - right_hand_list[20][0])
+    
+    wristDist = ((left_hand_list[0][0] - right_hand_list[0][0]) ** 2 + (left_hand_list[0][1] - right_hand_list[0][1]) ** 2) ** 0.5
+    
+    avgDy = (dyIndex + dyMid + dyRing + dyPinky) / 4
+    avgDx = (dxRing + dxPinky + dxMid + dxIndex) / 4
+    return avgDy >= 500 and avgDx <= 200 and wristDist <= 200
+
+
+
+
+def detect_triangle(left_hand,right_hand):
+    left_hand_list = left_hand["lmList"]
+    right_hand_list = right_hand["lmList"]
+
+    thumb_distance = ((left_hand_list[4][0]- right_hand_list[4][0])**2 + (left_hand_list[4][1]- right_hand_list[4][1])**2) ** 0.5 
+    index_distance = ((left_hand_list[8][0]- right_hand_list[8][0])**2 + (left_hand_list[8][1]- right_hand_list[8][1])**2) ** 0.5
+
+    index_avg_y =  (left_hand_list[8][1] + right_hand_list[8][1])//2
+    index_avg_x =  (left_hand_list[8][0] + right_hand_list[8][0])//2
+    thumb_avg_y =  (left_hand_list[4][1] + right_hand_list[4][1])//2
+    thumb_avg_x =  (left_hand_list[4][1] + right_hand_list[4][1])//2
+
+
+    print("index_avg_x",index_avg_x)
+    print("index_avg_y",index_avg_y)
+    print("thumb_avg_x",thumb_avg_x)
+    print("thumb_avg_y",index_avg_y)
+
+
+    return thumb_distance<150 and index_distance<150 and abs(index_avg_y -thumb_avg_y) > 350 and abs(index_avg_x -thumb_avg_x)<500
