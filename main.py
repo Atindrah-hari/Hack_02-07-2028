@@ -17,7 +17,7 @@ from cvzone.HandTrackingModule import HandDetector
 
 from func import *
 
-last_update = pygame.time.get_ticks() 
+last_update = pygame.time.get_ticks()
 clock = pygame.time.Clock()
 # Initialize Pygame
 pygame.init()
@@ -332,7 +332,7 @@ while running:
                 if current_gesture in move_list:
                     use_player_move(current_gesture)
                 hit_opponent()
-            elif app.turn and current_gesture == "Exit_sequence":
+            if current_gesture == "Exit_sequence":
                 toSelect()
 
         elif not app.turn and not app.text_box_active:
